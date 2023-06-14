@@ -12,15 +12,24 @@ https://github.com/damienvanrobaeys/Lenovo_Models_Reference/blob/main/MTM_to_Fri
 
 #>
 
-$URL = "https://download.lenovo.com/bsco/schemas/list.conf.txt"
-$Get_Web_Content = Invoke-RestMethod -Uri $URL -Method GET
-$Get_Models = ($Get_Web_Content -split "`r`n")
+$URL = "https://download.lenovo.com/luc/bios.txt#"
+$Get_Web_Content = (Invoke-WebRequest -Uri $URL).Content
+$Models = $Get_Web_Content -split "`r`n"
 
 foreach ($device in $managedDevices) {
     
     $deviceNotes = (Get-MgDeviceManagementManagedDevice -ManagedDeviceId $device.Id -Property "Notes").Notes
     $Mtm = $device.Model.Substring(0, 4).Trim()
-    $FamilyName = ($Get_Models | Where-Object { $_ -like "*$Mtm*" }).Split("(")[0]
+    $FamilyName = $(foreach ($Model in $Models) { 
+            if ($Model.Contains($Mtm)) { 
+                if ($Model.Contains("Type")) {
+                    $Model.Split("Type")[0]
+                }
+                else {
+                    $Model.Split("=")[0]
+                }
+            }
+        }) | Sort-Object -Unique
     
     if ([string]::IsNullOrEmpty($deviceNotes)) {
 
