@@ -1,6 +1,8 @@
 Disconnect-Graph -ErrorAction SilentlyContinue
 Connect-MgGraph -Scopes DeviceManagementManagedDevices.ReadWrite.All, Directory.Read.All
-Select-MgProfile -Name beta
+
+# No longer needed in Graph SDK V2
+# Select-MgProfile -Name beta
 
 # Filter for Lenovo devices
 $managedDevices = Get-MgDeviceManagementManagedDevice -Filter "Manufacturer eq 'LENOVO'"
