@@ -22,7 +22,7 @@ foreach ($device in $managedDevices) {
     
     $deviceNotes = (Get-MgDeviceManagementManagedDevice -ManagedDeviceId $device.Id -Property "Notes").Notes
     $Mtm = $device.Model.Substring(0, 4).Trim()
-    $FamilyName = $(foreach ($Model in $Models) { 
+    [string]$FamilyName = $(foreach ($Model in $Models) { 
             if ($Model.Contains($Mtm)) { 
                 if ($Model.Contains("Type")) {
                     $Model.Split("Type")[0]
