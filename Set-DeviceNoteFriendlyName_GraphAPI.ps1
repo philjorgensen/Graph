@@ -17,11 +17,18 @@ $devicesRequest = @{
 
 try
 {
-    $managedDevices = (Invoke-MgGraphRequest @devicesRequest).value
+    # Follow @odata.nextLink until every page of devices has been retrieved
+    $managedDevices = [System.Collections.Generic.List[object]]::new()
+    do
+    {
+        $response = Invoke-MgGraphRequest @devicesRequest
+        if ($response.value) { $managedDevices.AddRange([object[]]$response.value) }
+        $devicesRequest.Uri = $response.'@odata.nextLink'
+    } while ($devicesRequest.Uri)
 }
 catch
 {
-    Write-Error "Failed to retrieve managed devices: $_.Exception.Message"
+    Write-Error "Failed to retrieve managed devices: $($_.Exception.Message)"
     return
 }
 
@@ -46,7 +53,7 @@ foreach ($device in $managedDevices)
     }
     catch
     {
-        Write-Error "Failed to retrieve device details for device ID $($device.id): $_.Exception.Message"
+        Write-Error "Failed to retrieve device details for device ID $($device.id): $($_.Exception.Message)"
         continue
     }
 
@@ -67,6 +74,12 @@ foreach ($device in $managedDevices)
             }
         }) | Sort-Object -Unique
 
+    if ([string]::IsNullOrWhiteSpace($FamilyName))
+    {
+        Write-Warning "Model $($device.model) for device ID $($device.id) was not found in the catalog. Skipping."
+        continue
+    }
+
     $notesRequest = @{
         Uri    = "$($endpoint)/$($version)/$($resource)/$($device.id)"
         Method = "PATCH"
@@ -79,11 +92,11 @@ foreach ($device in $managedDevices)
         try
         {
             Invoke-MgGraphRequest @notesRequest
-            Write-Host "Updated notes for device ID $($device.id) to $($FamilyName)"
+            Write-Output "Updated notes for device ID $($device.id) to $($FamilyName)"
         }
         catch
         {
-            Write-Error "Failed to update notes for device ID $($device.id): $_.Exception.Message"
+            Write-Error "Failed to update notes for device ID $($device.id): $($_.Exception.Message)"
         }
     }
     elseif ($deviceNotes -notmatch $FamilyName)
@@ -93,15 +106,15 @@ foreach ($device in $managedDevices)
         try
         {
             Invoke-MgGraphRequest @notesRequest
-            Write-Host "Appended notes for device ID $($device.id) with $($FamilyName)"
+            Write-Output "Appended notes for device ID $($device.id) with $($FamilyName)"
         }
         catch
         {
-            Write-Error "Failed to append notes for device ID $($device.id): $_.Exception.Message"
+            Write-Error "Failed to append notes for device ID $($device.id): $($_.Exception.Message)"
         }
     }
     else
     {
-        Write-Host "No update needed for device ID $($device.id)"
+        Write-Output "No update needed for device ID $($device.id)"
     }
 }
